@@ -8,5 +8,3 @@ pub mod vector3;
 pub mod material;
 pub mod config;
 pub mod scenes;
-pub mod aabb;
-// pub mod bhv;

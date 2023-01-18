@@ -1,11 +1,9 @@
 use nalgebra::Vector3;
 use crate::{ray::*, material::*};
-use crate::aabb::AABB;
 
 
 pub trait Primitive : Send + Sync{
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
-    fn bounding_box(&self) -> Option<AABB>;
 }
 
 #[derive(Debug, Clone)]
@@ -51,14 +49,5 @@ impl Primitive for Sphere {
             }
         }
         None
-    }
-
-    fn bounding_box(&self) -> Option<AABB> {
-        let bounding_box = AABB::new(
-            self.center - Vector3::new(self.radius, self.radius, self.radius),
-            self.center + Vector3::new(self.radius, self.radius, self.radius),
-        );
-
-        Some(bounding_box)
     }
 }
