@@ -77,8 +77,8 @@ pub fn get_three_balls() -> Config {
     let glass_inside = Material::Dielectric(Dielectric::new(1.5));
 
     let scene = Config {
-        height: 90,
-        width: 160,
+        height: 180,
+        width: 320,
         samples_per_pixel: 20,
         depth: 50,
         camera: Camera::new(

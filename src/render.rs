@@ -1,5 +1,6 @@
-use std::{fs, io::Write};
+use std::{fs, io::Write, sync::{mpsc, Arc}};
 use rand::prelude::*;
+use threadpool::ThreadPool;
 
 use crate::parameters::*;
 use crate::ray::{Ray, HitRecord};
@@ -72,65 +73,66 @@ pub fn blue_sky(
     WHITE.scale(1. - t) + blue.scale(t)
 }
 
-pub fn render(scene: &Config) -> Vec<Color> {
-    let mut image = Vec::with_capacity(scene.width * scene.height);
-    let mut rng = thread_rng();
-
-    for j in (0..scene.height).rev() {
-        for i in 0..scene.width {
-            let mut color = BLACK;
-            for _ in 0..scene.samples_per_pixel {
-                let u = i as f32 / scene.width as f32 + rng.gen::<f32>();
-                let v = j as f32 / scene.height as f32 + rng.gen::<f32>();
-                let ray = scene.camera.get_ray(u, v);
-                // color = color + ray_color(&ray, &scene, scene.depth);
-                color = color + blue_sky(&ray, &scene, scene.depth);
-            }
-
-            image.push(color)
-        }
-    }
-
-    image
-}
-
-pub fn render_and_write(scene: &Config, filename: &str) {
+pub fn render(scene: Config, filename: &str) {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
         .create(true)
         .open(filename)
         .unwrap();
+    
+    let scene = Arc::new(scene);
+    let (tx, rx) = mpsc::channel();
+    let n_workers = 8;
+    let pool = ThreadPool::new(n_workers);
+
+    let mut image = vec![vec![(0, 0, 0); scene.width as usize]; scene.height as usize];
+
+    let scale = 1. / scene.samples_per_pixel as f32;
+
+    for j in 0..scene.height {
+        let tx_row = tx.clone();
+        let scene = Arc::clone(&scene);
+        pool.execute(move || {
+            for i in 0..scene.width {
+                let mut color = BLACK;
+                for _ in 0..scene.samples_per_pixel {
+                    let u = i as f32 / scene.width as f32;
+                    let v = j as f32 / scene.height as f32;
+                    let ray = scene.camera.get_ray(u, v);
+                    color = color + ray_color(&ray, &scene, scene.depth);
+                }
+
+                let r = (scale * color.r).sqrt();
+                let g = (scale * color.g).sqrt();
+                let b = (scale * color.b).sqrt();
+
+                tx_row.send(((i, j), Color::new(r, g, b))).unwrap()
+
+            }
+        })
+    }
+
+    drop(tx);
+
+    for ((i, j), color) in rx {
+        let r = clamp(color.r * 255., 0., 255.);
+        let g = clamp(color.g * 255., 0., 255.); 
+        let b = clamp(color.b * 255., 0., 255.); 
+        image[j][i] = (r as u8, g as u8, b as u8);
+    }
 
     file.write_all("P3\n".as_bytes()).expect("write failed");
     file.write_all(format!("{} {}\n", scene.width, scene.height).as_bytes()).expect("write failed");
     file.write_all("255\n".as_bytes()).expect("write failed");
 
-    let scale = 1. / scene.samples_per_pixel as f32;
-
-    for j in (0..scene.height).rev() {
-        for i in 0..scene.width {
-            let mut color = BLACK;
-            for _ in 0..scene.samples_per_pixel {
-                let u = i as f32 / scene.width as f32;
-                let v = j as f32 / scene.height as f32;
-                let ray = scene.camera.get_ray(u, v);
-                color = color + ray_color(&ray, &scene, scene.depth);
-            }
-
-            let mut r = (scale * color.r).sqrt();
-            let mut g = (scale * color.g).sqrt();
-            let mut b = (scale * color.b).sqrt();
-
-            r = clamp(r * 255., 0., 255.);
-            g = clamp(g * 255., 0., 255.); 
-            b = clamp(b * 255., 0., 255.); 
-
+    for row in image {
+        for (r, g, b) in row {
             file.write_all(format!("{} {} {}\n",r as u8, g as u8, b as u8)
                            .as_bytes()).expect("write failed");
-
         }
     }
+
 }
 
 
