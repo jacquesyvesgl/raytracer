@@ -1,9 +1,13 @@
 use rand::Rng;
 
-use crate::{ray::*, ray::HitRecord, color::Color, vector3::*};
+use crate::{ray::*, ray::HitRecord, color::*, vector3::*};
 
 pub trait Scatterable {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Color)>;
+
+    fn emitted(&self) -> Color {
+        BLACK
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -11,6 +15,7 @@ pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
     Dielectric(Dielectric),
+    Light(Light),
     
 } 
 
@@ -20,7 +25,38 @@ impl Scatterable for Material {
             Material::Lambertian(l) => l.scatter(ray, hit_record),
             Material::Metal(m)=> m.scatter(ray, hit_record),
             Material::Dielectric(d) => d.scatter(ray, hit_record),
+            Material::Light(l) => l.scatter(ray, hit_record),
         }
+    }
+
+    fn emitted(&self) -> Color {
+        match self {
+            Material::Lambertian(l) => l.emitted(),
+            Material::Metal(m)=> m.emitted(),
+            Material::Dielectric(d) => d.emitted(),
+            Material::Light(l) => l.emitted(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Light {
+    light: Color,
+}
+
+impl Light {
+    pub fn new(light: Color) -> Light {
+        Light { light }
+    }
+}
+
+impl Scatterable for Light {
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord) -> Option<(Option<Ray>, Color)> {
+        Some((None, BLACK)) // Light does't scatter anything
+    }
+
+    fn emitted(&self) -> Color {
+        self.light
     }
 }
 

@@ -2,8 +2,6 @@ use rtiow::scenes::*;
 use rtiow::render::render;
 
 fn main() {
-
-    let scene = get_three_balls();
-    // let image = render(&scene);
+    let scene = three_balls();
     render(scene, "zebi.ppm");
 }

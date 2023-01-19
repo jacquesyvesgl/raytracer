@@ -1,6 +1,7 @@
-use std::{fs, io::Write, sync::{mpsc, Arc}};
+use std::{fs, io::Write, sync::{mpsc, Arc}, time::Instant};
 use rand::prelude::*;
 use threadpool::ThreadPool;
+use rayon::prelude::*;
 
 use crate::parameters::*;
 use crate::ray::{Ray, HitRecord};
@@ -10,7 +11,7 @@ use crate::config::Config;
 use crate::color::*;
 
 fn hit_world<'material>(
-    world: &'material Vec<Sphere>,
+    world: &'material Vec<Box<dyn Primitive>>,
     ray: &Ray, 
     t_min: f32, 
     t_max: f32,
@@ -40,15 +41,17 @@ pub fn ray_color(
     match hit {
         Some(hit_record) => {
             let scatter = hit_record.material.scatter(ray, &hit_record);
+            let emitted_color = hit_record.material.emitted();
             match scatter {
-                Some((scattered, albedo)) => {
-                    match scattered {
+                Some((scattered_ray, attenuation)) => {
+                    match scattered_ray {
                         // Scatter and attenuate by the reflectance (= albedo)
-                        Some(scattered_ray) => albedo * ray_color(&scattered_ray, scene, depth - 1),
-                        None => BLACK,
+                        Some(sr) => emitted_color + attenuation * ray_color(&sr, scene, depth - 1),
+                        None => emitted_color,
                     }
                 }
-                None => BLACK
+                None => BLACK // For now, the only possibility for a ray 
+                              // to be here is to have be inside a metal.
             }
         }
         None => {
@@ -57,11 +60,12 @@ pub fn ray_color(
             let blue = Color::new(0.5, 0.7, 1.0);
 
             WHITE.scale(1. - t) + blue.scale(t)
+            // BLACK
         }
     }
 }
 
-pub fn blue_sky(
+fn blue_sky(
     ray: &Ray,
     _scene: &Config,
     _depth: usize,
@@ -74,13 +78,6 @@ pub fn blue_sky(
 }
 
 pub fn render(scene: Config, filename: &str) {
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        .open(filename)
-        .unwrap();
-    
     let scene = Arc::new(scene);
     let (tx, rx) = mpsc::channel();
     let n_workers = 8;
@@ -90,15 +87,19 @@ pub fn render(scene: Config, filename: &str) {
 
     let scale = 1. / scene.samples_per_pixel as f32;
 
-    for j in 0..scene.height {
+    let start = Instant::now();
+    println!("Starting rendering...");
+
+    for i in 0..scene.height {
         let tx_row = tx.clone();
         let scene = Arc::clone(&scene);
         pool.execute(move || {
-            for i in 0..scene.width {
+            for j in 0..scene.width {
+                let mut rng = thread_rng();
                 let mut color = BLACK;
                 for _ in 0..scene.samples_per_pixel {
-                    let u = i as f32 / scene.width as f32;
-                    let v = j as f32 / scene.height as f32;
+                    let u = (j as f32 + rng.gen::<f32>()) / scene.width as f32;
+                    let v = (i as f32 + rng.gen::<f32>())/ scene.height as f32;
                     let ray = scene.camera.get_ray(u, v);
                     color = color + ray_color(&ray, &scene, scene.depth);
                 }
@@ -107,7 +108,8 @@ pub fn render(scene: Config, filename: &str) {
                 let g = (scale * color.g).sqrt();
                 let b = (scale * color.b).sqrt();
 
-                tx_row.send(((i, j), Color::new(r, g, b))).unwrap()
+                // Don't ask why, just admire the result.
+                tx_row.send(((scene.height - 1 - i, j), Color::new(r, g, b))).unwrap()
 
             }
         })
@@ -115,13 +117,31 @@ pub fn render(scene: Config, filename: &str) {
 
     drop(tx);
 
+    let mut n_pixels_computed = 0;
+    let total = scene.width * scene.height;
+    let twenty_percent = total / 5;
     for ((i, j), color) in rx {
+        n_pixels_computed += 1;
         let r = clamp(color.r * 255., 0., 255.);
         let g = clamp(color.g * 255., 0., 255.); 
         let b = clamp(color.b * 255., 0., 255.); 
-        image[j][i] = (r as u8, g as u8, b as u8);
+        image[i][j] = (r as u8, g as u8, b as u8);
+        if n_pixels_computed % twenty_percent == 0 {
+            println!("Rendered {} / {} pixels (~ {}%), time elapsed: {:?}",
+                     n_pixels_computed,
+                     total,
+                     (n_pixels_computed as f32 / total as f32) * 100.,
+                     start.elapsed())
+        }
     }
 
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(filename)
+        .unwrap();
+    
     file.write_all("P3\n".as_bytes()).expect("write failed");
     file.write_all(format!("{} {}\n", scene.width, scene.height).as_bytes()).expect("write failed");
     file.write_all("255\n".as_bytes()).expect("write failed");
@@ -135,7 +155,6 @@ pub fn render(scene: Config, filename: &str) {
 
 }
 
-
 fn clamp(number: f32, min: f32, max: f32) -> f32 {
     let mut res = number;
     if number < min {
@@ -144,38 +163,5 @@ fn clamp(number: f32, min: f32, max: f32) -> f32 {
         res = max
     }
     res
-}
-
-pub fn write_image(image: Vec<Color>, world: &Config, filename: &str) {
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        .open(filename)
-        .unwrap();
-
-    file.write_all("P3\n".as_bytes()).expect("write failed");
-    file.write_all(format!("{} {}\n", world.width, world.height).as_bytes()).expect("write failed");
-    file.write_all("255\n".as_bytes()).expect("write failed");
-
-    let scale = 1. / world.samples_per_pixel as f32;
-
-    for color in image {
-        let mut r = color.r;
-        let mut g = color.g;
-        let mut b = color.b;
-
-        // Gamma-correct for gamma=2.0
-        r = (r * scale).sqrt();
-        g = (g * scale).sqrt();
-        b = (b * scale).sqrt();
-
-        r = clamp(r * 255., 0., 255.);
-        g = clamp(g * 255., 0., 255.); 
-        b = clamp(b * 255., 0., 255.); 
-
-        file.write_all(format!("{} {} {}\n",r as u8, g as u8, b as u8)
-                       .as_bytes()).expect("write failed");
-    }
 }
 

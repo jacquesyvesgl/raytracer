@@ -23,7 +23,7 @@ pub struct HitRecord<'material>{
     pub position: Vector3<f32>,
     pub normal: Vector3<f32>,
     pub t: f32,
-    pub front_face: bool,
     pub material: &'material Material,
+    pub front_face: bool,
 }
 
