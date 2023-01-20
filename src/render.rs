@@ -18,8 +18,8 @@ fn hit_world<'material>(
     ) -> Option<HitRecord<'material>> {
     let mut closest_so_far = t_max;
     let mut hit_record = None;
-    for sphere in world {
-        if let Some(hit) = sphere.hit(ray, t_min, closest_so_far) {
+    for object in world {
+        if let Some(hit) = object.hit(ray, t_min, closest_so_far) {
             closest_so_far = hit.t;
             hit_record = Some(hit);
         }
@@ -41,26 +41,24 @@ pub fn ray_color(
     match hit {
         Some(hit_record) => {
             let scatter = hit_record.material.scatter(ray, &hit_record);
-            let emitted_color = hit_record.material.emitted();
+            let emitted = hit_record.material.emitted();
             match scatter {
                 Some((scattered_ray, attenuation)) => {
-                    match scattered_ray {
-                        // Scatter and attenuate by the reflectance (= albedo)
-                        Some(sr) => emitted_color + attenuation * ray_color(&sr, scene, depth - 1),
-                        None => emitted_color,
-                    }
+                    // Scatter and attenuate by the reflectance (= albedo)
+                    emitted + attenuation * ray_color(&scattered_ray, scene, depth - 1)
                 }
-                None => BLACK // For now, the only possibility for a ray 
-                              // to be here is to have be inside a metal.
+                None => emitted
             }
         }
         None => {
-            let unit_direction = ray.direction.normalize();
-            let t = 0.5 * (unit_direction.y + 1.);
-            let blue = Color::new(0.5, 0.7, 1.0);
+            // let unit_direction = ray.direction.normalize();
+            // let t = 0.5 * (unit_direction.y + 1.);
+            // let blue = Color::new(0.5, 0.7, 1.0);
 
-            WHITE.scale(1. - t) + blue.scale(t)
-            // BLACK
+            // WHITE.scale(1. - t) + blue.scale(t)
+            println!("hit the void");
+            BLACK
+            // WHITE.scale(0.1)
         }
     }
 }

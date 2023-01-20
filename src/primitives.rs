@@ -61,18 +61,19 @@ impl Primitive for Sphere {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RectangleXY {
-    pub x0: f32,
-    pub x1: f32,
-    pub y0: f32,
-    pub y1: f32,
-    pub k: f32,
-    pub material: Material,
+    x0: f32,
+    x1: f32,
+    y0: f32, 
+    y1: f32,
+    k: f32,
+    material: Material,
 }
 
 impl RectangleXY {
     pub fn new(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: Material) -> RectangleXY {
-        RectangleXY { x0, x1, y0, y1, k, material }
+        RectangleXY { x0, x1, y0, y1, k, material}
     }
 }
 
@@ -82,19 +83,18 @@ impl Primitive for RectangleXY {
         if t < t_min || t > t_max {
             return None
         }
-        
+
         let x = ray.origin.x + t * ray.direction.x;
         let y = ray.origin.y + t * ray.direction.y;
         if x < self.x0 || x > self.x1 || y < self.y0 || y > self.y1 {
             return None
         }
-        
-        let position = ray.at(t);
+
         let outward_normal = Vector3::new(0., 0., 1.);
         let (normal, front_face) = set_face_normal(ray, outward_normal);
 
-        Some(HitRecord {
-            position,
+        return Some(HitRecord {
+            position: ray.at(t),
             normal,
             front_face,
             t,
@@ -103,18 +103,19 @@ impl Primitive for RectangleXY {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RectangleXZ {
-    pub x0: f32,
-    pub x1: f32,
-    pub z0: f32,
-    pub z1: f32,
-    pub k: f32,
-    pub material: Material,
+    x0: f32,
+    x1: f32,
+    z0: f32, 
+    z1: f32,
+    k: f32,
+    material: Material,
 }
 
 impl RectangleXZ {
     pub fn new(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: Material) -> RectangleXZ {
-        RectangleXZ { x0, x1, z0, z1, k, material }
+        RectangleXZ { x0, x1, z0, z1, k, material}
     }
 }
 
@@ -124,19 +125,18 @@ impl Primitive for RectangleXZ {
         if t < t_min || t > t_max {
             return None
         }
-        
+
         let x = ray.origin.x + t * ray.direction.x;
         let z = ray.origin.z + t * ray.direction.z;
         if x < self.x0 || x > self.x1 || z < self.z0 || z > self.z1 {
             return None
         }
-        
-        let position = ray.at(t);
+
         let outward_normal = Vector3::new(0., 0., 1.);
         let (normal, front_face) = set_face_normal(ray, outward_normal);
 
-        Some(HitRecord {
-            position,
+        return Some(HitRecord {
+            position: ray.at(t),
             normal,
             front_face,
             t,
@@ -145,18 +145,19 @@ impl Primitive for RectangleXZ {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RectangleYZ {
-    pub y0: f32,
-    pub y1: f32,
-    pub z0: f32,
-    pub z1: f32,
-    pub k: f32,
-    pub material: Material,
+    y0: f32,
+    y1: f32,
+    z0: f32, 
+    z1: f32,
+    k: f32,
+    material: Material,
 }
 
 impl RectangleYZ {
     pub fn new(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: Material) -> RectangleYZ {
-        RectangleYZ { y0, y1, z0, z1, k, material }
+        RectangleYZ { y0, y1, z0, z1, k, material}
     }
 }
 
@@ -166,19 +167,18 @@ impl Primitive for RectangleYZ {
         if t < t_min || t > t_max {
             return None
         }
-        
+
         let y = ray.origin.y + t * ray.direction.y;
         let z = ray.origin.z + t * ray.direction.z;
-        if y < self.y0 || y > self.y1 || z < self.z0 || z > self.z1 {
+        if z < self.z0 || z > self.z1 || y < self.y0 || y > self.y1 {
             return None
         }
-        
-        let position = ray.at(t);
+
         let outward_normal = Vector3::new(0., 0., 1.);
         let (normal, front_face) = set_face_normal(ray, outward_normal);
 
-        Some(HitRecord {
-            position,
+        return Some(HitRecord {
+            position: ray.at(t),
             normal,
             front_face,
             t,

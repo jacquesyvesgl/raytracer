@@ -1,9 +1,10 @@
 use rand::Rng;
+use nalgebra::Vector3;
 
 use crate::{ray::*, ray::HitRecord, color::*, vector3::*};
 
 pub trait Scatterable {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Color)>;
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)>;
 
     fn emitted(&self) -> Color {
         BLACK
@@ -16,11 +17,10 @@ pub enum Material {
     Metal(Metal),
     Dielectric(Dielectric),
     Light(Light),
-    
 } 
 
 impl Scatterable for Material {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Color)> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
         match self {
             Material::Lambertian(l) => l.scatter(ray, hit_record),
             Material::Metal(m)=> m.scatter(ray, hit_record),
@@ -32,7 +32,7 @@ impl Scatterable for Material {
     fn emitted(&self) -> Color {
         match self {
             Material::Lambertian(l) => l.emitted(),
-            Material::Metal(m)=> m.emitted(),
+            Material::Metal(m) => m.emitted(),
             Material::Dielectric(d) => d.emitted(),
             Material::Light(l) => l.emitted(),
         }
@@ -41,22 +41,22 @@ impl Scatterable for Material {
 
 #[derive(Debug, Clone)]
 pub struct Light {
-    light: Color,
+    color: Color,
 }
 
 impl Light {
-    pub fn new(light: Color) -> Light {
-        Light { light }
+    pub fn new(color: Color) -> Light {
+        return Light { color }
     }
 }
 
 impl Scatterable for Light {
-    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord) -> Option<(Option<Ray>, Color)> {
-        Some((None, BLACK)) // Light does't scatter anything
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord) -> Option<(Ray, Color)> {
+        None
     }
 
     fn emitted(&self) -> Color {
-        self.light
+        self.color
     }
 }
 
@@ -72,14 +72,14 @@ impl Lambertian {
 }
 
 impl Scatterable for Lambertian {
-    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Color)> {
-        let mut scatter_direction = hit_record.normal + random_unit_vector();
-        if near_zero(&scatter_direction) {
+    fn scatter(&self, _ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
+        let mut scatter_direction = hit_record.normal + Vector3::random_unit_vector();
+        if Vector3::near_zero(&scatter_direction) {
             scatter_direction = hit_record.normal;
         }
         let scattered = Ray::new(hit_record.position, scatter_direction);
         let attenuation = self.albedo;
-        Some((Some(scattered), attenuation))
+        Some((scattered, attenuation))
     }
 }
 
@@ -96,14 +96,14 @@ impl Metal {
 }
 
 impl Scatterable for Metal {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Color)> {
-        let reflected = reflect(&ray.direction, &hit_record.normal);
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
+        let reflected = Vector3::reflect(&ray.direction, &hit_record.normal);
         let scattered = Ray::new(
             hit_record.position, 
-            reflected + random_in_unit_sphere() * self.fuzz);
+            reflected + Vector3::random_in_unit_sphere() * self.fuzz);
         let attenuation = self.albedo;
         if scattered.direction.dot(&hit_record.normal) > 0. {
-            Some((Some(scattered), attenuation))
+            Some((scattered, attenuation))
         } else {
             None
         }
@@ -129,7 +129,7 @@ fn reflectance(cosine: f32, ref_idx: f32) -> f32 {
 }
 
 impl Scatterable for Dielectric {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Color)> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
         let mut rng = rand::thread_rng();
         let attenuation = Color::new(1., 1., 1.);
         let etai_over_etat = if hit_record.front_face { 
@@ -143,13 +143,13 @@ impl Scatterable for Dielectric {
 
         let cannot_refract = etai_over_etat * sin_theta > 1.;
         if cannot_refract || reflectance(cos_theta, etai_over_etat) > rng.gen() {
-            let reflected = reflect(&unit_direction, &hit_record.normal);
+            let reflected = Vector3::reflect(&unit_direction, &hit_record.normal);
             let scattered = Ray::new(hit_record.position, reflected);
-            Some((Some(scattered), attenuation))
+            Some((scattered, attenuation))
         } else {
-            let refracted = refract(&unit_direction, &hit_record.normal, etai_over_etat);
+            let refracted = Vector3::refract(&unit_direction, &hit_record.normal, etai_over_etat);
             let scattered = Ray::new(hit_record.position, refracted);
-            Some((Some(scattered), attenuation))
+            Some((scattered, attenuation))
         }
     }
 }

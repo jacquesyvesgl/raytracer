@@ -80,7 +80,7 @@ pub fn three_balls() -> Config {
     let scene = Config {
         height: 360,
         width: 640,
-        samples_per_pixel: 100,
+        samples_per_pixel: 10,
         depth: 50,
         camera: Camera::new(
             Vector3::new(-2., 2., 1.), 
@@ -128,12 +128,12 @@ pub fn three_balls() -> Config {
 
 pub fn simple_light() -> Config {
     let ground_material = Material::Lambertian(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    let material_center = Material::Lambertian(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
+    let sphere = Material::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.8)));
     let light = Material::Light(Light::new(Color::new(4., 4., 4.)));
 
     let scene = Config {
-        height: 400,
-        width: 600,
+        height: 360,
+        width: 640,
         samples_per_pixel: 100,
         depth: 50,
         camera: Camera::new(
@@ -141,76 +141,38 @@ pub fn simple_light() -> Config {
             Vector3::new(0., 2., 0.),
             Vector3::new(0., 1., 0.),
             20.,
-            600. / 400.
-            ),
-            objects: vec![
-                Box::new(Sphere{
-                    center: Vector3::new(0., -1000., 0.),
-                    radius: 1000.,
-                    material: ground_material,
-                }),
-                Box::new(Sphere{
-                    center: Vector3::new(0., 2., 0.),
-                    radius: 2.,
-                    material: material_center,
-                }),
-                Box::new(RectangleXY::new(3., 5., 1., 3., -2., light)),
-            ]
-    };
+            16./9.),
+        objects: vec![
+            Box::new(Sphere{
+                center: Vector3::new(0., -1000., 0.),
+                radius: 1000.,
+                material: ground_material,
+            }),
+            Box::new(Sphere{
+                center: Vector3::new(0., 2., 0.),
+                radius: 2.,
+                material: sphere,
+            }),
+            Box::new(RectangleXY::new(3., 5., 1., 3., -2., light)),
+        ]
 
-    scene
-}
-
-pub fn simple_light_mirrored() -> Config {
-    let ground_material = Material::Lambertian(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    let material_center = Material::Lambertian(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
-    let light = Material::Light(Light::new(Color::new(10., 10., 10.)));
-
-    let scene = Config {
-        height: 400,
-        width: 600,
-        samples_per_pixel: 10,
-        depth: 50,
-        camera: Camera::new(
-            Vector3::new(6., 3., 26.), 
-            Vector3::new(0., 2., 0.),
-            Vector3::new(0., 1., 0.),
-            20.,
-            600. / 400.
-            ),
-            objects: vec![
-                Box::new(Sphere{
-                    center: Vector3::new(0., -1000., 0.),
-                    radius: 1000.,
-                    material: ground_material,
-                }),
-                Box::new(Sphere{
-                    center: Vector3::new(0., 2., 0.),
-                    radius: 2.,
-                    material: material_center,
-                }),
-                Box::new(RectangleYZ::new(1., 3., 3., 5., -2., light)),
-            ]
     };
 
     scene
 }
 
 pub fn cornell_box() -> Config {
-    let ground = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
-    // let red = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
-    // let green = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
     let red = Material::Lambertian(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
     let green = Material::Lambertian(Lambertian::new(Color::new(0.12, 0.45, 0.15)));
+    let floor = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
     let back = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let front = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
     let ceiling = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
     let light = Material::Light(Light::new(Color::new(15., 15., 15.)));
-    // let light_sphere = Material::Light(Light::new(Color::new(15., 15., 15.)));
-    // let light_sphere = Material::Lambertian(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
 
     let scene = Config {
-        height: 600,
-        width: 600,
+        height: 400,
+        width: 400,
         samples_per_pixel: 10,
         depth: 50,
         camera: Camera::new(
@@ -218,17 +180,16 @@ pub fn cornell_box() -> Config {
             Vector3::new(278., 278., 0.),
             Vector3::new(0., 1., 0.),
             40.,
-            1.
-            ),
-            objects: vec![
-                Box::new(RectangleYZ::new(0., 555., 0., 555., 555., green)),
-                Box::new(RectangleYZ::new(0., 555., 0., 555., 0., red)),
-                Box::new(RectangleXZ::new(213., 343., 227., 332., 554., light)),
-                Box::new(RectangleXZ::new(0., 555., 0., 555., 0., ground)),
-                Box::new(RectangleXZ::new(0., 555., 0., 555., 555., ceiling)),
-                Box::new(RectangleXY::new(0., 555., 0., 555., 555., back)),
-                // Box::new(Sphere::new(Vector3::new(280., 280., 280.), 100., light_sphere))
-            ]
+            1.),
+        objects: vec![
+            Box::new(RectangleYZ::new(0., 555., -1000., 555., 555., green)),
+            Box::new(RectangleYZ::new(0., 555., -1000., 555., 0., red)),
+            Box::new(RectangleXZ::new(213., 343., 227., 332., 554., light)),
+            Box::new(RectangleXZ::new(0., 555., -1000., 555., 0., floor)),
+            Box::new(RectangleXZ::new(0., 555., -1000., 555., 555., ceiling)),
+            Box::new(RectangleXY::new(0., 555., 0., 555., 555., back)),
+            Box::new(RectangleXY::new(0., 555., 0., 555., -1000., front)),
+        ]
     };
 
     scene
