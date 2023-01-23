@@ -1,7 +1,6 @@
 use std::{fs, io::Write, sync::{mpsc, Arc}, time::Instant};
 use rand::prelude::*;
 use threadpool::ThreadPool;
-use rayon::prelude::*;
 
 use crate::parameters::*;
 use crate::ray::{Ray, HitRecord};
@@ -56,7 +55,9 @@ pub fn ray_color(
             // let blue = Color::new(0.5, 0.7, 1.0);
 
             // WHITE.scale(1. - t) + blue.scale(t)
-            println!("hit the void");
+            // println!("Sent to the void");
+            // println!("-- Origin: {:?}", ray.origin);
+            // println!("-- Direction: {:?}\n", ray.direction);
             BLACK
             // WHITE.scale(0.1)
         }

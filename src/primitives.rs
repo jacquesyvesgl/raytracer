@@ -53,6 +53,7 @@ impl Primitive for Sphere {
                         front_face,
                         t: *root, 
                         material: &self.material,
+                        incoming: ray.direction.clone(),
                     });
                 }
             }
@@ -99,6 +100,7 @@ impl Primitive for RectangleXY {
             front_face,
             t,
             material: &self.material,
+            incoming: ray.direction.clone(),
         })
     }
 }
@@ -132,7 +134,7 @@ impl Primitive for RectangleXZ {
             return None
         }
 
-        let outward_normal = Vector3::new(0., 0., 1.);
+        let outward_normal = Vector3::new(0., 1., 0.);
         let (normal, front_face) = set_face_normal(ray, outward_normal);
 
         return Some(HitRecord {
@@ -141,6 +143,7 @@ impl Primitive for RectangleXZ {
             front_face,
             t,
             material: &self.material,
+            incoming: ray.direction.clone(),
         })
     }
 }
@@ -174,7 +177,7 @@ impl Primitive for RectangleYZ {
             return None
         }
 
-        let outward_normal = Vector3::new(0., 0., 1.);
+        let outward_normal = Vector3::new(1., 0., 0.);
         let (normal, front_face) = set_face_normal(ray, outward_normal);
 
         return Some(HitRecord {
@@ -183,6 +186,130 @@ impl Primitive for RectangleYZ {
             front_face,
             t,
             material: &self.material,
+            incoming: ray.direction.clone(),
         })
+    }
+}
+
+pub struct RectangularCuboid { // "Box" is a reserved keyword lol
+    pub vertice0: Vector3<f32>,
+    pub vertice1: Vector3<f32>,
+    sides: Vec<Box<dyn Primitive>>,
+}
+
+impl RectangularCuboid {
+    pub fn new(p0: Vector3<f32>, p1: Vector3<f32>, material: Material) -> RectangularCuboid {
+        let mut sides = Vec::<Box<dyn Primitive>>::new();
+
+        sides.push(Box::new(RectangleXY::new(p0.x, p1.x, p0.y, p1.y, p1.z, material.clone())));
+        sides.push(Box::new(RectangleXY::new(p0.x, p1.x, p0.y, p1.y, p0.z, material.clone())));
+
+        sides.push(Box::new(RectangleXZ::new(p0.x, p1.x, p0.z, p1.z, p1.y, material.clone())));
+        sides.push(Box::new(RectangleXZ::new(p0.x, p1.x, p0.z, p1.z, p0.y, material.clone())));
+
+        sides.push(Box::new(RectangleYZ::new(p0.y, p1.y, p0.z, p1.z, p1.x, material.clone())));
+        sides.push(Box::new(RectangleYZ::new(p0.y, p1.y, p0.z, p1.z, p0.x, material.clone())));
+
+        RectangularCuboid {
+            vertice0: p0,
+            vertice1: p1,
+            sides
+        }
+    }
+}
+
+impl Primitive for RectangularCuboid {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        // It is the same function as hit_world
+        // except the cheeky &
+        let mut closest_so_far = t_max;
+        let mut hit_record = None;
+        for side in &self.sides {
+            if let Some(hit) = side.hit(ray, t_min, closest_so_far) {
+                closest_so_far = hit.t;
+                hit_record = Some(hit)
+            }
+        }
+        hit_record
+    }
+}
+
+pub struct Translate {
+    hittable: Box<dyn Primitive>,
+    offset: Vector3<f32>,
+}
+
+impl Translate {
+    pub fn new(hittable: Box<dyn Primitive>, offset: Vector3<f32>) -> Translate {
+        Translate { hittable, offset }
+    }
+}
+
+impl Primitive for Translate {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        let moved_ray = Ray::new(ray.origin - self.offset, ray.direction);
+        match self.hittable.hit(&moved_ray, t_min, t_max) {
+            None => None,
+            Some(hit) => {
+                let (normal, front_face) = set_face_normal(&moved_ray, hit.normal);
+                Some(HitRecord {
+                    position: hit.position + self.offset,
+                    normal,
+                    front_face,
+                    t: hit.t,
+                    material: hit.material,
+                    incoming: hit.incoming,
+                })
+            }
+        }
+    }
+}
+
+pub struct RotateY {
+    sin_theta: f32,
+    cos_theta: f32,
+    hittable: Box<dyn Primitive>,
+}
+
+impl RotateY {
+    pub fn new(angle: f32, hittable: Box<dyn Primitive>) -> RotateY {
+        RotateY { sin_theta: angle.sin(), cos_theta: angle.cos(), hittable}
+    }
+}
+
+impl Primitive for RotateY {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        let origin = Vector3::new(
+            self.cos_theta * ray.origin.x - self.sin_theta * ray.origin.z,
+            ray.origin.y,
+            self.sin_theta * ray.origin.x + self.cos_theta * ray.origin.z);
+        let direction = Vector3::new(
+            self.cos_theta * ray.direction.x - self.sin_theta * ray.direction.z,
+            ray.direction.y,
+            self.sin_theta * ray.direction.x + self.cos_theta * ray.direction.z);
+        let rotated_ray = Ray::new(origin, direction);
+
+        match self.hittable.hit(&rotated_ray, t_min, t_max) {
+            None => None,
+            Some(hit) => {
+                let position = Vector3::new(
+                    self.cos_theta * hit.position.x + self.sin_theta * hit.position.z,
+                    hit.position.y,
+                    - self.sin_theta * hit.position.x + self.cos_theta * hit.position.z);
+                let outward_normal = Vector3::new(
+                    self.cos_theta * hit.normal.x + self.sin_theta * hit.normal.z,
+                    hit.normal.y, 
+                    - self.sin_theta * hit.normal.x + self.cos_theta * hit.normal.z);
+                let (normal, front_face) = set_face_normal(&rotated_ray, outward_normal);
+                Some(HitRecord {
+                    position,
+                    normal,
+                    front_face,
+                    t: hit.t,
+                    material: hit.material,
+                    incoming: hit.incoming,
+                })
+            }
+        }
     }
 }

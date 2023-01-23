@@ -11,11 +11,11 @@ pub struct Camera {
     pub vertical: Vector3<f32>,
     pub focal_length: f32,
     pub lower_left_corner: Vector3<f32>,
-    look_from: Vector3<f32>,
-    look_at: Vector3<f32>,
-    vup: Vector3<f32>, // Vertical up, define the rotation
-    vfov: f32, // Vertical FOV
-    aspect_ratio: f32,
+    // look_from: Vector3<f32>,
+    // look_at: Vector3<f32>,
+    // vup: Vector3<f32>, // Vertical up, define the rotation
+    // vfov: f32, // Vertical FOV
+    // aspect_ratio: f32,
 }
 
 #[derive(Debug)]
@@ -49,11 +49,11 @@ impl Camera {
             vertical,
             focal_length: (look_from - look_at).norm(), 
             lower_left_corner,
-            look_from,
-            look_at,
-            vup,
-            vfov,
-            aspect_ratio
+            // look_from,
+            // look_at,
+            // vup,
+            // vfov,
+            // aspect_ratio
         }
     }
 

@@ -25,5 +25,6 @@ pub struct HitRecord<'material>{
     pub t: f32,
     pub material: &'material Material,
     pub front_face: bool,
+    pub incoming: Vector3<f32>,
 }
 

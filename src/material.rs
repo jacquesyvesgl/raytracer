@@ -76,9 +76,15 @@ impl Scatterable for Lambertian {
         let mut scatter_direction = hit_record.normal + Vector3::random_unit_vector();
         if Vector3::near_zero(&scatter_direction) {
             scatter_direction = hit_record.normal;
+
         }
         let scattered = Ray::new(hit_record.position, scatter_direction);
         let attenuation = self.albedo;
+        // println!("Scattered ray:");
+        // println!("-- Normal: {:?}", &hit_record.normal);
+        // println!("-- Incoming: {:?}", &hit_record.incoming);
+        // println!("-- Origin: {:?}", &hit_record.position);
+        // println!("-- Direction: {:?}\n", &scatter_direction);
         Some((scattered, attenuation))
     }
 }

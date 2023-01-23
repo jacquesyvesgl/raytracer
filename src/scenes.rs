@@ -80,7 +80,7 @@ pub fn three_balls() -> Config {
     let scene = Config {
         height: 360,
         width: 640,
-        samples_per_pixel: 10,
+        samples_per_pixel: 100,
         depth: 50,
         camera: Camera::new(
             Vector3::new(-2., 2., 1.), 
@@ -173,7 +173,7 @@ pub fn cornell_box() -> Config {
     let scene = Config {
         height: 400,
         width: 400,
-        samples_per_pixel: 10,
+        samples_per_pixel: 100,
         depth: 50,
         camera: Camera::new(
             Vector3::new(278., 278., -800.), 
@@ -189,6 +189,53 @@ pub fn cornell_box() -> Config {
             Box::new(RectangleXZ::new(0., 555., -1000., 555., 555., ceiling)),
             Box::new(RectangleXY::new(0., 555., 0., 555., 555., back)),
             Box::new(RectangleXY::new(0., 555., 0., 555., -1000., front)),
+        ]
+    };
+
+    scene
+}
+
+pub fn small_cornell_box() -> Config {
+    let red = Material::Lambertian(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
+    let green = Material::Lambertian(Lambertian::new(Color::new(0.12, 0.45, 0.15)));
+    let floor = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let back = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let front = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let ceiling = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let box1 = Material::Lambertian(Lambertian::new(Color::new(0.73, 0.73, 0.73)));
+    let box2 = Material::Lambertian(Lambertian::new(Color::new(0.65, 0.05, 0.05)));
+    let light_front = Material::Light(Light::new(Color::new(15., 15., 15.)));
+    let light_back = Material::Light(Light::new(Color::new(15., 15., 15.)));
+
+    let scene = Config {
+        height: 400,
+        width: 400,
+        samples_per_pixel: 10,
+        depth: 50,
+        camera: Camera::new(
+            Vector3::new(0., 10., -20.), 
+            Vector3::new(0., 10., 20.),
+            Vector3::new(0., 1., 0.),
+            45.,
+            1.),
+        objects: vec![
+            Box::new(RectangleYZ::new(0., 20., -20., 20., 10., green)),
+            Box::new(RectangleYZ::new(0., 20., -20., 20., -10., red)),
+            Box::new(RectangleXZ::new(-2.5, 2.5, 7.5, 12.5, 19., light_front)),
+            // Box::new(RectangleXZ::new(-3., 3., -12.5, -7.5, 19., light_back)),
+            Box::new(RectangleXZ::new(-10., 10., -20., 20., 0., floor)),
+            Box::new(RectangleXZ::new(-10., 10., -20., 20., 20., ceiling)),
+            Box::new(RectangleXY::new(-10., 10., 0., 20., 20., front)),
+            Box::new(RectangleXY::new(-10., 10., 0., 20., -20., back)),
+            Box::new(RectangularCuboid::new(
+                    Vector3::new(-5., 0., 2.),
+                    Vector3::new(0., 6., 8.),
+                    box1)),
+            Box::new(RectangularCuboid::new(
+                    Vector3::new(-1., 0., 10.),
+                    Vector3::new(5., 12., 16.),
+                    box2)),
+            
         ]
     };
 
